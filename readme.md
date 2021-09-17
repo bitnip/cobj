@@ -34,6 +34,3 @@ Documentation
 - Unit tests do not cover alloc failures.
 - Only polygonal mesh is supported.
 - Only importing is supported.
-
-## Authors
-- Paige Xura
