@@ -456,12 +456,12 @@ void parseLineParsesVertex()
 
     int result = parseLine(obj, input);
     assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
-    assertIntegersEqual(o->vertexCount, 1);
-    assertIntegersEqual(o->unwrapCount, 0);
-    assertIntegersEqual(o->normalCount, 0);
-    assertIntegersEqual(o->faceCount, 0);
+    assertIntegersEqual(obj->objectCount, 0);
+    assertIntegersEqual(obj->vertexCount, 1);
+    assertIntegersEqual(obj->unwrapCount, 0);
+    assertIntegersEqual(obj->normalCount, 0);
+    //struct WavefrontObjectObject* o = obj->objects;
+    //assertIntegersEqual(o->faceCount, 0);
 
     wavefrontObjectFree(obj);
 }
@@ -473,12 +473,12 @@ void parseLineParsesUnwrap()
 
     int result = parseLine(obj, input);
     assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
-    assertIntegersEqual(o->vertexCount, 0);
-    assertIntegersEqual(o->unwrapCount, 1);
-    assertIntegersEqual(o->normalCount, 0);
-    assertIntegersEqual(o->faceCount, 0);
+    assertIntegersEqual(obj->objectCount, 0);
+    assertIntegersEqual(obj->vertexCount, 0);
+    assertIntegersEqual(obj->unwrapCount, 1);
+    assertIntegersEqual(obj->normalCount, 0);
+    //struct WavefrontObjectObject* o = obj->objects;
+    //assertIntegersEqual(o->faceCount, 0);
 
     wavefrontObjectFree(obj);
 }
@@ -490,12 +490,12 @@ void parseLineParsesNormal()
 
     int result = parseLine(obj, input);
     assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
-    assertIntegersEqual(o->vertexCount, 0);
-    assertIntegersEqual(o->unwrapCount, 0);
-    assertIntegersEqual(o->normalCount, 1);
-    assertIntegersEqual(o->faceCount, 0);
+    assertIntegersEqual(obj->objectCount, 0);
+    assertIntegersEqual(obj->vertexCount, 0);
+    assertIntegersEqual(obj->unwrapCount, 0);
+    assertIntegersEqual(obj->normalCount, 1);
+    //struct WavefrontObjectObject* o = obj->objects;
+    //assertIntegersEqual(o->faceCount, 0);
 
     wavefrontObjectFree(obj);
 }
@@ -509,9 +509,9 @@ void parseLineParsesFace()
     assertTrue(result);
     assertIntegersEqual(obj->objectCount, 1);
     struct WavefrontObjectObject* o = obj->objects;
-    assertIntegersEqual(o->vertexCount, 0);
-    assertIntegersEqual(o->unwrapCount, 0);
-    assertIntegersEqual(o->normalCount, 0);
+    assertIntegersEqual(obj->vertexCount, 0);
+    assertIntegersEqual(obj->unwrapCount, 0);
+    assertIntegersEqual(obj->normalCount, 0);
     assertIntegersEqual(o->faceCount, 1);
 
     wavefrontObjectFree(obj);
@@ -607,38 +607,38 @@ void normalWavefrontObjectFromString()
 
     assertStringsEqual(o->name, "test_object");
 
-    assertIntegersEqual(o->vertexCount, 3);
-    assertFloatsEqual(o->vertices[0].x, 1.00);
-    assertFloatsEqual(o->vertices[0].y, 2.00);
-    assertFloatsEqual(o->vertices[0].z, 3.00);
-    assertFloatsEqual(o->vertices[1].x, 4.00);
-    assertFloatsEqual(o->vertices[1].y, 5.00);
-    assertFloatsEqual(o->vertices[1].z, 6.00);
-    assertFloatsEqual(o->vertices[2].x, 7.00);
-    assertFloatsEqual(o->vertices[2].y, 8.00);
-    assertFloatsEqual(o->vertices[2].z, 9.00);
+    assertIntegersEqual(obj->vertexCount, 3);
+    assertFloatsEqual(obj->vertices[0].x, 1.00);
+    assertFloatsEqual(obj->vertices[0].y, 2.00);
+    assertFloatsEqual(obj->vertices[0].z, 3.00);
+    assertFloatsEqual(obj->vertices[1].x, 4.00);
+    assertFloatsEqual(obj->vertices[1].y, 5.00);
+    assertFloatsEqual(obj->vertices[1].z, 6.00);
+    assertFloatsEqual(obj->vertices[2].x, 7.00);
+    assertFloatsEqual(obj->vertices[2].y, 8.00);
+    assertFloatsEqual(obj->vertices[2].z, 9.00);
 
-    assertIntegersEqual(o->unwrapCount, 3);
-    assertFloatsEqual(o->unwraps[0].u, 0.1);
-    assertFloatsEqual(o->unwraps[0].v, 0.2);
-    assertFloatsEqual(o->unwraps[0].w, 0.3);
-    assertFloatsEqual(o->unwraps[1].u, 0.4);
-    assertFloatsEqual(o->unwraps[1].v, 0.5);
-    assertFloatsEqual(o->unwraps[1].w, 0.6);
-    assertFloatsEqual(o->unwraps[2].u, 0.7);
-    assertFloatsEqual(o->unwraps[2].v, 0.8);
-    assertFloatsEqual(o->unwraps[2].w, 0.9);
+    assertIntegersEqual(obj->unwrapCount, 3);
+    assertFloatsEqual(obj->unwraps[0].u, 0.1);
+    assertFloatsEqual(obj->unwraps[0].v, 0.2);
+    assertFloatsEqual(obj->unwraps[0].w, 0.3);
+    assertFloatsEqual(obj->unwraps[1].u, 0.4);
+    assertFloatsEqual(obj->unwraps[1].v, 0.5);
+    assertFloatsEqual(obj->unwraps[1].w, 0.6);
+    assertFloatsEqual(obj->unwraps[2].u, 0.7);
+    assertFloatsEqual(obj->unwraps[2].v, 0.8);
+    assertFloatsEqual(obj->unwraps[2].w, 0.9);
 
-    assertIntegersEqual(o->normalCount, 3);
-    assertFloatsEqual(o->normals[0].x, 0.1);
-    assertFloatsEqual(o->normals[0].y, 0.2);
-    assertFloatsEqual(o->normals[0].z, 0.3);
-    assertFloatsEqual(o->normals[1].x, 0.4);
-    assertFloatsEqual(o->normals[1].y, 0.5);
-    assertFloatsEqual(o->normals[1].z, 0.6);
-    assertFloatsEqual(o->normals[2].x, 0.7);
-    assertFloatsEqual(o->normals[2].y, 0.8);
-    assertFloatsEqual(o->normals[2].z, 0.9);
+    assertIntegersEqual(obj->normalCount, 3);
+    assertFloatsEqual(obj->normals[0].x, 0.1);
+    assertFloatsEqual(obj->normals[0].y, 0.2);
+    assertFloatsEqual(obj->normals[0].z, 0.3);
+    assertFloatsEqual(obj->normals[1].x, 0.4);
+    assertFloatsEqual(obj->normals[1].y, 0.5);
+    assertFloatsEqual(obj->normals[1].z, 0.6);
+    assertFloatsEqual(obj->normals[2].x, 0.7);
+    assertFloatsEqual(obj->normals[2].y, 0.8);
+    assertFloatsEqual(obj->normals[2].z, 0.9);
 
     assertIntegersEqual(o->faceCount, 1);
     assertIntegersEqual(o->materialCount, 1);

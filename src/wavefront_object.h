@@ -28,14 +28,8 @@ struct WavefrontObjectFace {
 
 struct WavefrontObjectObject {
     char* name;
-    struct WavefrontObjectVertex* vertices;
-    struct WavefrontObjectUnwrap* unwraps;
-    struct WavefrontObjectNormal* normals;
-    struct WavefrontObjectFace* faces;
     char** materials;
-    unsigned int vertexCount;
-    unsigned int unwrapCount;
-    unsigned int normalCount;
+    struct WavefrontObjectFace* faces;
     unsigned int faceCount;
     unsigned int materialCount;
 };
@@ -43,7 +37,13 @@ struct WavefrontObjectObject {
 struct WavefrontObject {
     char** materialLibraries;
     struct WavefrontObjectObject* objects;
+    struct WavefrontObjectVertex* vertices;
+    struct WavefrontObjectUnwrap* unwraps;
+    struct WavefrontObjectNormal* normals;
     unsigned int materialLibraryCount;
+    unsigned int vertexCount;
+    unsigned int unwrapCount;
+    unsigned int normalCount;
     unsigned int objectCount;
     int currentMaterial;
     int currentObject;
@@ -57,9 +57,9 @@ void wavefrontObjectAddVertex(struct WavefrontObject* obj, struct WavefrontObjec
 void wavefrontObjectAddUnwrap(struct WavefrontObject* obj, struct WavefrontObjectUnwrap* unwrap);
 void wavefrontObjectAddNormal(struct WavefrontObject* obj, struct WavefrontObjectNormal* normal);
 void wavefrontObjectAddFace(struct WavefrontObject* obj, struct WavefrontObjectFace* face);
-void wavefrontObjectAddMaterialLibrary(struct WavefrontObject* obj, char* materialLibrary);
-int wavefrontObjectAddMaterial(struct WavefrontObject* obj, char* material);
-int wavefrontObjectAddObject(struct WavefrontObject* obj, char* object);
+void wavefrontObjectAddMaterialLibrary(struct WavefrontObject* obj, const char* materialLibrary);
+int wavefrontObjectAddMaterial(struct WavefrontObject* obj, const char* material);
+int wavefrontObjectAddObject(struct WavefrontObject* obj, const char* object);
 
 #ifdef __cplusplus
 }

@@ -1,33 +1,39 @@
 # COBJ
+
 C library for interacting with Wavefront OBJ files.
 
 ## Prerequisites
-Build
 ```
-    gcc : https://gcc.gnu.org/install/
-  cutil : https://github.com/bitnip/cutil
+cutil: https://github.com/bitnip/cutil
 ```
-Coverage Report
+### Windows
 ```
-  gcovr : https://github.com/gcovr/gcovr
+cygwin: https://www.cygwin.com/install.html
+cygwin packages:
+  gcc-core
+  gcovr
+  gdb
+  make
+  mingw64-x86_64-gcc-core
+  mingw64-x86_64-gcc-g++
+  python3
 ```
-Documentation
-```
- pandoc : https://pandoc.org/installing.html
-```
+---
 
 ## Usage
-Build
-: `make build`
 
-Test
-: `make test`
+### Build
 
-Coverage Report
-: `make coverage`
+`> make build`
 
-Documentation
-: `make docs`
+### Test
+`> make test`
+
+### Coverage Report
+`> make coverage`
+
+### Documentation
+`> make docs`
 
 ## Known Issues
 - Alloc failures are not handled.

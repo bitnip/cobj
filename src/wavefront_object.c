@@ -28,6 +28,13 @@ struct WavefrontObject* wavefrontObjectCreate() {
     wavefrontObject->currentMaterial = -1;
     wavefrontObject->currentObject = -1;
 
+    wavefrontObject->vertices = NULL;
+    wavefrontObject->unwraps = NULL;
+    wavefrontObject->normals = NULL;
+    wavefrontObject->vertexCount = 0;
+    wavefrontObject->unwrapCount = 0;
+    wavefrontObject->normalCount = 0;
+
     return wavefrontObject;
 }
 
@@ -71,47 +78,43 @@ void wavefrontObjectFree(struct WavefrontObject* obj) {
             wavefrontObjectFaceFree(o.faces + faceIndex);
         }
         free(o.faces);
-
-        free(o.vertices);
-        free(o.unwraps);
-        free(o.normals);
-        o.vertexCount = 0;
-        o.unwrapCount = 0;
-        o.normalCount = 0;
     }
     obj->objectCount = 0;
 
+    free(obj->vertices);
+    free(obj->unwraps);
+    free(obj->normals);
+    obj->vertexCount = 0;
+    obj->unwrapCount = 0;
+    obj->normalCount = 0;
     free(obj);
 }
 
 void wavefrontObjectAddVertex(
       struct WavefrontObject* obj,
       struct WavefrontObjectVertex* vertex) {
-    struct WavefrontObjectObject* o = getObject(obj);
-    o->vertices = (struct WavefrontObjectVertex*) realloc(
-        o->vertices,
-        ++o->vertexCount * sizeof(struct WavefrontObjectVertex));
-    o->vertices[o->vertexCount - 1] = *vertex;
+    obj->vertices = (struct WavefrontObjectVertex*) realloc(
+        obj->vertices,
+        ++obj->vertexCount * sizeof(struct WavefrontObjectVertex));
+    obj->vertices[obj->vertexCount - 1] = *vertex;
 }
 
 void wavefrontObjectAddUnwrap(
       struct WavefrontObject* obj,
       struct WavefrontObjectUnwrap* unwrap) {
-    struct WavefrontObjectObject* o = getObject(obj);
-    o->unwraps = (struct WavefrontObjectUnwrap*) realloc(
-        o->unwraps,
-        ++o->unwrapCount * sizeof(struct WavefrontObjectUnwrap));
-    o->unwraps[o->unwrapCount - 1] = *unwrap;
+    obj->unwraps = (struct WavefrontObjectUnwrap*) realloc(
+        obj->unwraps,
+        ++obj->unwrapCount * sizeof(struct WavefrontObjectUnwrap));
+    obj->unwraps[obj->unwrapCount - 1] = *unwrap;
 }
 
 void wavefrontObjectAddNormal(
       struct WavefrontObject* obj,
       struct WavefrontObjectNormal* normal) {
-    struct WavefrontObjectObject* o = getObject(obj);
-    o->normals = (struct WavefrontObjectNormal*) realloc(
-        o->normals,
-        ++o->normalCount * sizeof(struct WavefrontObjectNormal));
-    o->normals[o->normalCount - 1] = *normal;
+    obj->normals = (struct WavefrontObjectNormal*) realloc(
+        obj->normals,
+        ++obj->normalCount * sizeof(struct WavefrontObjectNormal));
+    obj->normals[obj->normalCount - 1] = *normal;
 }
 
 void wavefrontObjectAddFace(
@@ -127,7 +130,7 @@ void wavefrontObjectAddFace(
 
 void wavefrontObjectAddMaterialLibrary(
       struct WavefrontObject* obj,
-      char* materialLibrary) {
+      const char* materialLibrary) {
     obj->materialLibraries = (char **) realloc(obj->materialLibraries,
         ++obj->materialLibraryCount * sizeof(char*));
     obj->materialLibraries[obj->materialLibraryCount - 1] = strCopy(materialLibrary);
@@ -135,7 +138,7 @@ void wavefrontObjectAddMaterialLibrary(
 
 int wavefrontObjectAddMaterial(
       struct WavefrontObject* obj,
-      char* material) {
+      const char* material) {
     struct WavefrontObjectObject* o = getObject(obj);
     for (unsigned int i = 0; i < o->materialCount; i++) {
         if (strcmp(material, o->materials[i]) == 0) {
@@ -153,7 +156,7 @@ int wavefrontObjectAddMaterial(
 
 int wavefrontObjectAddObject(
       struct WavefrontObject* obj,
-      char* name) {
+      const char* name) {
     for (unsigned int i = 0; i < obj->objectCount; i++) {
         if(strcmp(name, obj->objects[i].name) == 0) {
             obj->currentObject = i;
@@ -175,14 +178,8 @@ int wavefrontObjectAddObject(
 
     struct WavefrontObjectObject* o = obj->objects + obj->currentObject;
     o->name = strCopy(name);
-    o->vertices = NULL;
-    o->unwraps = NULL;
-    o->normals = NULL;
     o->faces = NULL;
     o->materials = NULL;
-    o->vertexCount = 0;
-    o->unwrapCount = 0;
-    o->normalCount = 0;
     o->faceCount = 0;
     o->materialCount = 0;
     return obj->currentObject;
