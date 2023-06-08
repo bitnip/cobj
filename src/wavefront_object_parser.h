@@ -6,7 +6,7 @@ extern "C"{
 
 #include "wavefront_object.h"
 
-struct WavefrontObject* parseWavefrontObjectFromString(char* input);
+int parseWavefrontObjectFromString(struct WavefrontObject* obj, char* input);
 
 #ifdef __cplusplus
 }

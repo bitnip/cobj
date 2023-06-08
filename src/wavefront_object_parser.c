@@ -1,63 +1,54 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include "cutil/src/error.h"
 #include "cutil/src/string.h"
-
 #include "wavefront_object_parser.h"
 
-static char parseComment(const char* line)
-{
-    const char* trimmed = strAfterWhitespace(line);
-    return *trimmed == '#';
-}
-
-int parseVertex(struct WavefrontObjectVertex* vertex, const char* line)
-{
-    line = strAfterWhitespace(line);
-    int itemsRead = sscanf(
+static int parseVertex(struct WavefrontObject* obj, const char* line) {
+    struct WavefrontObjectVertex vertex;
+    vertex.w = 1.0;
+    if(sscanf(
         line,
-        "v %lf %lf %lf %lf",
-        &vertex->x,
-        &vertex->y,
-        &vertex->z,
-        &vertex->w);
-    if(itemsRead < 3) return 0;
-    if(itemsRead == 3) vertex->w = 1.0;
-    return 1;
+        "%lf %lf %lf %lf",
+        &vertex.x,
+        &vertex.y,
+        &vertex.z,
+        &vertex.w) >= 3) {
+        return wavefrontObjectAddVertex(obj, &vertex);
+    }
+    return STATUS_PARSE_ERR;
 }
 
-int parseUnwrap(struct WavefrontObjectUnwrap* unwrap, const char* line)
-{
-    line = strAfterWhitespace(line);
-
-    int itemsRead = sscanf(line, "vt %lf %lf %lf", &unwrap->u, &unwrap->v, &unwrap->w);
-    if(itemsRead < 2)
-        return 0;
-    if(itemsRead == 2)
-        unwrap->w = 0.0;
-    return 1;
+static int parseUnwrap(struct WavefrontObject* obj, const char* line) {
+    struct WavefrontObjectUnwrap unwrap;
+    unwrap.w = 0.0;
+    if(sscanf(line, "%lf %lf %lf", &unwrap.u, &unwrap.v, &unwrap.w) >= 2) {
+        return wavefrontObjectAddUnwrap(obj, &unwrap);
+    }
+    return STATUS_PARSE_ERR;
 }
 
-int parseNormal(struct WavefrontObjectNormal* normal, const char* line)
-{
-    line = strAfterWhitespace(line);
-    int itemsRead = sscanf(line, "vn %lf %lf %lf", &normal->x, &normal->y, &normal->z);
-    if(itemsRead != 3)
-        return 0;
-    return 1;
+static int parseNormal(struct WavefrontObject* obj, const char* line) {
+    struct WavefrontObjectNormal normal;
+    if(sscanf(line, "%lf %lf %lf", &normal.x, &normal.y, &normal.z) == 3) {
+        return wavefrontObjectAddNormal(obj, &normal);
+    }
+    return STATUS_PARSE_ERR;
 }
 
-int parsePoint(struct WavefrontObjectPoint* point, const char* input)
-{
-    unsigned int indicies[3] = {0}; // Vertex, UV, Normal.
+static int parsePoint(struct WavefrontObjectPoint* point, const char* input) {
+    unsigned int indicies[3] = {0, 0, 0}; // Vertex, UV, Normal.
     short i = 0;
-    const char *thisToken = input, *nextDelim = NULL, *nextToken = NULL;
-    const char *lastDelim = NULL;
-    while (tokenize(&thisToken, &nextDelim, &nextToken, "/")) {
-        if (i>2) return 0; // Garbage after indicies.
-        if (thisToken==nextDelim) {// Token is the empty string.
+    const char* thisToken = input,* nextDelim = NULL,* nextToken = NULL;
+    const char* lastDelim = NULL;
+    while(tokenize(&thisToken, &nextDelim, &nextToken, "/")) {
+        if(i>2) return STATUS_PARSE_ERR; // Garbage after indicies.
+        if(thisToken==nextDelim) {// Token is the empty string.
             // Fail on missing vertex or dangling delimeter.
-            if (i==0 || (lastDelim && !nextToken)) return 0;
+            if (i==0 || (lastDelim && !nextToken)) return STATUS_PARSE_ERR;
             indicies[i] = 0;
         }
-        else if (strAfterInteger(thisToken) < nextDelim) return 0; // Token is not an integer.
+        else if(strAfterInteger(thisToken) < nextDelim) return STATUS_PARSE_ERR; // Token is not an integer.
         else indicies[i] = atoi(thisToken);
         lastDelim = nextDelim;
         i++;
@@ -65,94 +56,101 @@ int parsePoint(struct WavefrontObjectPoint* point, const char* input)
     point->v = indicies[0];
     point->vt = indicies[1];
     point->vn = indicies[2];
-    return 1;
+    return STATUS_OK;
 }
 
-int parseFace(struct WavefrontObjectFace* face, const char* line)
-{
-    line = strAfterWhitespace(line);
-    if(*(line++) != 'f') return 0; // Not a face definition.
-    struct WavefrontObjectPoint point;
-    const char *thisToken = line, *nextDelim = NULL, *nextToken = NULL;
-    while (tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS)) {
-        char* token = strCopyN(thisToken, nextDelim-thisToken);
-        if(!token) return 0;
-        if(parsePoint(&point, token)) wavefrontObjectFaceAddPoint(face, &point);
-        free(token);
-    }
-    return 1;
-}
-
-int parseMaterialLibrary(struct WavefrontObject* obj, const char* line)
-{
-    line = strAfterWhitespace(line);
-    const char *thisToken = line, *nextDelim = NULL, *nextToken = NULL;
-    tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS);
-    if (strStartsWith(thisToken, "mtllib") != nextDelim) return 0; // Garbage after map_kd.
-    // Remaining tokens are material library files.
-    line = strAfterWhitespace(line);
-    while (tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS)) {
-        char* token = strCopyN(thisToken, nextDelim-thisToken);
-        if(!token) return 0;
-        wavefrontObjectAddMaterialLibrary(obj, token);
-        free(token);
-    };
-    return 1;
-}
-
-int parseUseMaterial(struct WavefrontObject* obj, const char* line)
-{
-    line = strAfterWhitespace(line);
-    const char *thisToken = line, *nextDelim = NULL, *nextToken = NULL;
-    tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS);
-    if (strStartsWith(thisToken, "usemtl") != nextDelim) return 0; // Garbage after map_kd.
-    wavefrontObjectAddMaterial(obj, nextToken);
-    return 1;
-}
-
-int parseObject(struct WavefrontObject* obj, const char* line)
-{
-    line = strAfterWhitespace(line);
-    if (*line++ != 'o') return 0;
-    line = strAfterWhitespace(line);
-    wavefrontObjectAddObject(obj, line);
-    return 1;
-}
-
-int parseLine(struct WavefrontObject* obj, const char* line)
-{
-    if (obj == NULL || line == NULL) return 0;
-
-    struct WavefrontObjectVertex vertex;
-    struct WavefrontObjectUnwrap unwrap;
-    struct WavefrontObjectNormal normal;
+static int parseFace(struct WavefrontObject* obj, const char* line) {
+    if(!line) return STATUS_PARSE_ERR;
     struct WavefrontObjectFace face;
     face.pointCount = 0;
     face.points = NULL;
+    const char *thisToken = line,* nextDelim = NULL,* nextToken = NULL;
+    while(tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS)) {
+        char* token = strCopyN(thisToken, nextDelim-thisToken);
+        if(!token) return STATUS_ALLOC_ERR;
 
-    if (parseVertex(&vertex, line))      wavefrontObjectAddVertex(obj, &vertex);
-    else if (parseUnwrap(&unwrap, line)) wavefrontObjectAddUnwrap(obj, &unwrap);
-    else if (parseNormal(&normal, line)) wavefrontObjectAddNormal(obj, &normal);
-    else if (parseFace(&face, line))     wavefrontObjectAddFace(obj, &face);
-    else if (parseMaterialLibrary(obj, line));
-    else if (parseUseMaterial(obj, line));
-    else if (parseObject(obj, line));
-    else if (parseComment(line));
-    else return 0;
+        struct WavefrontObjectPoint point;
+        int result = parsePoint(&point, token);
+        if(result == STATUS_OK) {
+            result = wavefrontObjectFaceAddPoint(&face, &point);
+        }
 
-    return 1;
+        free(token);
+        if(result) return result;
+    }
+    return face.pointCount ? wavefrontObjectAddFace(obj, &face) : STATUS_PARSE_ERR;
 }
 
-struct WavefrontObject* parseWavefrontObjectFromString(char* input) {
-    if (!input) return NULL;
-    struct WavefrontObject* obj = wavefrontObjectCreate();
+static int parseMaterialLibrary(struct WavefrontObject* obj, const char* line) {
+    if(!line) return STATUS_PARSE_ERR;
+    int result = STATUS_PARSE_ERR;
+    const char *thisToken = line, *nextDelim = NULL, *nextToken = NULL;
+    // Remaining tokens are material library files.
+    while(tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS)) {
+        if(thisToken==nextDelim) continue; // Ignore empty string tokens.
+        char* token = strCopyN(thisToken, nextDelim-thisToken);
+        if(!token) return STATUS_ALLOC_ERR;
+        result = wavefrontObjectAddMaterialLibrary(obj, token);
+        free(token);
+        if(result) {
+            return result;
+        }
+    };
+    return STATUS_OK;
+}
+
+static int parseUseMaterial(struct WavefrontObject* obj, const char* line) {
+    if(!line) return STATUS_PARSE_ERR;
+    return wavefrontObjectAddMaterial(obj, line);
+}
+
+static int parseObject(struct WavefrontObject* obj, const char* line) {
+    if(!line) return STATUS_PARSE_ERR;
+    return wavefrontObjectAddObject(obj, line);
+}
+
+struct Parser {
+    char name[8];
+    int (*fn)(void* obj, const char* input);
+};
+struct Parser parsers[] = {
+    {"v", (int (*)(void*, const char*))parseVertex},
+    {"vt", (int (*)(void*, const char*))parseUnwrap},
+    {"vn", (int (*)(void*, const char*))parseNormal},
+    {"f", (int (*)(void*, const char*))parseFace},
+    {"mtllib", (int (*)(void*, const char*))parseMaterialLibrary},
+    {"usemtl", (int (*)(void*, const char*))parseUseMaterial},
+    {"o", (int (*)(void*, const char*))parseObject},
+    {"#", NULL}
+};
+
+int parseWavefrontObjectFromString(struct WavefrontObject* obj, char* input) {
+    if(!input) return NULL;
+    wavefrontObjectCompose(obj);
 
     const char *thisToken = input, *nextDelim = NULL, *nextToken = NULL;
-    while (tokenize(&thisToken, &nextDelim, &nextToken, ASCII_V_DELIMITERS)) {
+    while(tokenize(&thisToken, &nextDelim, &nextToken, ASCII_V_DELIMITERS)) {
         char* line = strCopyN(thisToken, nextDelim-thisToken);
-        if(!line) return NULL;
-        parseLine(obj, line);
+        if(!line) {
+            wavefrontObjectRelease(obj);
+            return STATUS_ALLOC_ERR;
+        }
+        int result = STATUS_OK;
+        const char* tempLine = strAfterWhitespace(line);
+        const char* thisToken = tempLine,* nextDelim = NULL,* nextToken = NULL;
+        tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS);
+        for(int i = 0; i < sizeof(parsers)/sizeof(struct Parser); i++) {
+            if((strStartsWith(thisToken, parsers[i].name) == nextDelim)) {
+                const char* temp = nextToken ? strAfterWhitespace(nextToken) : NULL;
+                result = parsers[i].fn ? parsers[i].fn(obj, temp) : STATUS_OK;
+                break;
+            }
+        }
         free(line);
+        if(result) {
+            wavefrontObjectRelease(obj);
+            return result;
+        }
     }
-    return obj;
+    return STATUS_OK;
 }

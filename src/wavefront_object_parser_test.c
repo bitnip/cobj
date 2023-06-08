@@ -1,520 +1,380 @@
-#include <stddef.h>
 #include "wavefront_object_parser.h"
-#include <string.h>
+#include "cutil/src/error.h"
 #include "cutil/src/assertion.h"
 
-/* Private Functions */
-int parsePoint(struct WavefrontObjectPoint* point, char* input);
-int parseFace(struct WavefrontObjectFace* face, char* line);
-int parseVertex(struct WavefrontObjectVertex* vertex, char* input);
-int parseUnwrap(struct WavefrontObjectUnwrap* unwrap, char* line);
-int parseNormal(struct WavefrontObjectNormal* normal, char* line);
-int parseLine(struct WavefrontObject* obj, char* line);
-int parseMaterialLibrary(struct WavefrontObject* obj, char* line);
-void wavefrontObjectFaceFree(struct WavefrontObjectFace* face);
+void canParseEmptyString() {
+    char input[] = "";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    wavefrontObjectRelease(&wObj);
+}
 
 /* Wavefront Obj Point Test Cases */
-void canParseEmptyString()
-{
-    char input[] = "";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
+
+void canParseVertexOnlyPoint() {
+    char input[] = "f 10 10 10";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 1);
+    assertIntegersEqual(wObj.objects->faces->points->v, 10);
+    assertIntegersEqual(wObj.objects->faces->points->vt, 0);
+    assertIntegersEqual(wObj.objects->faces->points->vn, 0);
+    wavefrontObjectRelease(&wObj);
 }
 
-void canParseVertexOnlyPoint()
-{
-    char input[] = "10";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertTrue(result);
-    assertIntegersEqual(point.v, 10);
-    assertIntegersEqual(point.vt, 0);
-    assertIntegersEqual(point.vn, 0);
+void canParseVertexAndTextureOnlyPoint() {
+    char input[] = "f 10/9 10/9 10/9";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 1);
+    assertIntegersEqual(wObj.objects->faces->points->v, 10);
+    assertIntegersEqual(wObj.objects->faces->points->vt, 9);
+    assertIntegersEqual(wObj.objects->faces->points->vn, 0);
+    wavefrontObjectRelease(&wObj);
 }
 
-void canParseVertexAndTextureOnlyPoint()
-{
-    char input[] = "10/9";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertTrue(result);
-    assertIntegersEqual(point.v, 10);
-    assertIntegersEqual(point.vt, 9);
-    assertIntegersEqual(point.vn, 0);
+void canParseVertexTextureNormalPoint() {
+    char input[] = "f 10/9/8 10/9/8 10/9/8";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objects->faces->points->v, 10);
+    assertIntegersEqual(wObj.objects->faces->points->vt, 9);
+    assertIntegersEqual(wObj.objects->faces->points->vn, 8);
+    wavefrontObjectRelease(&wObj);
 }
 
-void canParseVertexTextureNormalPoint()
-{
-    char input[] = "10/9/8";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertTrue(result);
-    assertIntegersEqual(point.v, 10);
-    assertIntegersEqual(point.vt, 9);
-    assertIntegersEqual(point.vn, 8);
+void canParseVertexNormalPoint() {
+    char input[] = " f 10//8 10//8 10//8";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 1);
+    assertIntegersEqual(wObj.objects->faces->points->v, 10);
+    assertIntegersEqual(wObj.objects->faces->points->vt, 0);
+    assertIntegersEqual(wObj.objects->faces->points->vn, 8);
+    wavefrontObjectRelease(&wObj);
 }
 
-void canParseVertexNormalPoint()
-{
-    char input[] = "10//8";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertTrue(result);
-    assertIntegersEqual(point.v, 10);
-    assertIntegersEqual(point.vt, 0);
-    assertIntegersEqual(point.vn, 8);
+void garbageAfterVertexIndexFails() {
+    char input[] = "f 10j/9/8 10j/9/8 10j/9/8";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void garbageAfterVertexIndexFails()
-{
-    char input[] = "10j/9/8";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
+void garbageAfterTextureIndexFails() {
+    char input[] = "f 10/9j/8 10/9j/8 10/9j/8";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void garbageAfterTextureIndexFails()
-{
-    char input[] = "10/9j/8";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
+void garbageAfterNormalIndexFails() {
+    char input[] = "f 10/9/8j 10/9/8j 10/9/8j";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void garbageAfterNormalIndexFails()
-{
-    char input[] = "10/9/8j";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
+void missingVertexFails() {
+    char input[] = "f /1/10 /1/10 /1/10";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void missingVertexFails()
-{
-    char input[] = "/1/10";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
+void missingTextureFails() {
+    char input[] = "f 1/ 1/ 1/";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void missingTextureFails()
-{
-    char input[] = "1/";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
-}
-
-void missingNormalFails()
-{
-    char input[] = "1/2/";
-    struct WavefrontObjectPoint point;
-    int result = parsePoint(&point, input);
-    assertFalse(result);
+void missingNormalFails() {
+    char input[] = "f 1/2/ 1/2/ 1/2/";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
 /* Wavefront Obj Face Test Cases */
-void canParseGenericFaceWithSpaces()
-{
+void canParseGenericFaceWithSpaces() {
     char input[] = "f 1/2/3 4/5/6 7/8/9";
-    struct WavefrontObjectFace face;
-    face.points = NULL;
-    face.pointCount = 0;
-    int result = parseFace(&face, input);
-    assertTrue(result);
-    assertIntegersEqual(face.pointCount, 3);
-    wavefrontObjectFaceFree(&face);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    struct WavefrontObjectObject* obj = wObj.objects;
+    struct WavefrontObjectFace* face = obj->faces;
+    assertIntegersEqual(face->pointCount, 3);
+    wavefrontObjectRelease(&wObj);
 }
 
-void canParseGenericFaceWithTabs()
-{
+void canParseGenericFaceWithTabs() {
     char input[] = "f\t1/2/3\t4/5/6\t7/8/9";
-    struct WavefrontObjectFace face;
-    face.points = NULL;
-    face.pointCount = 0;
-    int result = parseFace(&face, input);
-    assertTrue(result);
-    assertIntegersEqual(face.pointCount, 3);
-    wavefrontObjectFaceFree(&face);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    struct WavefrontObjectObject* obj = wObj.objects;
+    struct WavefrontObjectFace* face = obj->faces;
+    assertIntegersEqual(face->pointCount, 3);
+    wavefrontObjectRelease(&wObj);
 }
 
-void faceFailToParseEmptyString()
-{
-    char input[] = "";
-    struct WavefrontObjectFace face;
-    face.points = NULL;
-    face.pointCount = 0;
-    int result = parseFace(&face, input);
-    assertFalse(result);
-    assertIntegersEqual(face.pointCount, 0);
-}
-
-void faceFailWithMissingF()
-{
-    char input[] = "\t1/2/3\t4/5/6\t7/8/9";
-    struct WavefrontObjectFace face;
-    face.points = NULL;
-    face.pointCount = 0;
-    int result = parseFace(&face, input);
-    assertFalse(result);
-    assertIntegersEqual(face.pointCount, 0);
-    wavefrontObjectFaceFree(&face);
-}
-
-void faceMissingPoints()
-{
+void faceFailToParseEmptyString() {
     char input[] = "f";
-    struct WavefrontObjectFace face;
-    face.points = NULL;
-    face.pointCount = 0;
-    int result = parseFace(&face, input);
-    assertTrue(result);
-    assertIntegersEqual(face.pointCount, 0);
-    wavefrontObjectFaceFree(&face);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
+}
+
+void faceMissingPoints() {
+    char input[] = "f ";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
 /* Wavefront Obj Vertex Test Cases */
-void vertexParseFourCoordinates()
-{
+void vertexParseFourCoordinates() {
     char input[] = "v 1.234 0.123 0.321 0.5";
-    struct WavefrontObjectVertex vertex;
-    vertex.x = 0.0;
-    vertex.y = 0.0;
-    vertex.z = 0.0;
-    vertex.w = 0.0;
-    int result = parseVertex(&vertex, input);
-    assertTrue(result);
-    assertFloatsEqual(vertex.w, 0.5);
-    assertFloatsEqual(vertex.x, 1.234);
-    assertFloatsEqual(vertex.y, 0.123);
-    assertFloatsEqual(vertex.z, 0.321);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+
+    assertFloatsEqual(wObj.vertices->w, 0.5);
+    assertFloatsEqual(wObj.vertices->x, 1.234);
+    assertFloatsEqual(wObj.vertices->y, 0.123);
+    assertFloatsEqual(wObj.vertices->z, 0.321);
+    
+    wavefrontObjectRelease(&wObj);
 }
 
-void vertexParseThreeCoordinates()
-{
+void vertexParseThreeCoordinates() {
     char input[] = "v 1.234 0.123 0.321";
-    struct WavefrontObjectVertex vertex;
-    vertex.x = 0.0;
-    vertex.y = 0.0;
-    vertex.z = 0.0;
-    vertex.w = 0.0;
-    int result = parseVertex(&vertex, input);
-    assertTrue(result);
-    assertFloatsEqual(vertex.w, 1.000);
-    assertFloatsEqual(vertex.x, 1.234);
-    assertFloatsEqual(vertex.y, 0.123);
-    assertFloatsEqual(vertex.z, 0.321);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+
+    assertFloatsEqual(wObj.vertices->w, 1.000);
+    assertFloatsEqual(wObj.vertices->x, 1.234);
+    assertFloatsEqual(wObj.vertices->y, 0.123);
+    assertFloatsEqual(wObj.vertices->z, 0.321);
+
+    wavefrontObjectRelease(&wObj);
 }
 
-void vertexParseFailsTwoCoordinates()
-{
+void vertexParseFailsTwoCoordinates() {
     char input[] = "v 1.234 0.123";
-    struct WavefrontObjectVertex vertex;
-    vertex.x = 0.0;
-    vertex.y = 0.0;
-    vertex.z = 0.0;
-    vertex.w = 0.0;
-    int result = parseVertex(&vertex, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void vertexParseFailsOneCoordinate()
-{
+void vertexParseFailsOneCoordinate() {
     char input[] = "v 1.234";
-    struct WavefrontObjectVertex vertex;
-    vertex.x = 0.0;
-    vertex.y = 0.0;
-    vertex.z = 0.0;
-    vertex.w = 0.0;
-    int result = parseVertex(&vertex, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void vertexParseFailsNoCoordinates()
-{
+void vertexParseFailsNoCoordinates() {
+    char input[] = "v ";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
+}
+
+void vertexParseFailsEmptyString() {
     char input[] = "v";
-    struct WavefrontObjectVertex vertex;
-    vertex.x = 0.0;
-    vertex.y = 0.0;
-    vertex.z = 0.0;
-    vertex.w = 0.0;
-    int result = parseVertex(&vertex, input);
-    assertFalse(result);
-}
-
-void vertexParseFailsEmptyString()
-{
-    char input[] = "";
-    struct WavefrontObjectVertex vertex;
-    vertex.x = 0.0;
-    vertex.y = 0.0;
-    vertex.z = 0.0;
-    vertex.w = 0.0;
-    int result = parseVertex(&vertex, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
 /* Wavefront Obj Unwrap Test Cases */
-void unwrapParseThreeCoordinates()
-{
+void unwrapParseThreeCoordinates() {
     char input[] = "vt 1.234 0.123 0.321";
-    struct WavefrontObjectUnwrap unwrap;
-    unwrap.u = 0.0;
-    unwrap.v = 0.0;
-    unwrap.w = 0.0;
-    int result = parseUnwrap(&unwrap, input);
-    assertTrue(result);
-    assertFloatsEqual(unwrap.u, 1.234);
-    assertFloatsEqual(unwrap.v, 0.123);
-    assertFloatsEqual(unwrap.w, 0.321);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertFloatsEqual(wObj.unwraps->u, 1.234);
+    assertFloatsEqual(wObj.unwraps->v, 0.123);
+    assertFloatsEqual(wObj.unwraps->w, 0.321);
+    wavefrontObjectRelease(&wObj);
 }
 
-void unwrapParseTwoCoordinates()
-{
+void unwrapParseTwoCoordinates() {
     char input[] = "vt 1.234 0.123";
-    struct WavefrontObjectUnwrap unwrap;
-    unwrap.u = 0.0;
-    unwrap.v = 0.0;
-    unwrap.w = 0.0;
-    int result = parseUnwrap(&unwrap, input);
-    assertTrue(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    wavefrontObjectRelease(&wObj);
 }
 
-void unwrapParseFailsOneCoordinate()
-{
+void unwrapParseFailsOneCoordinate() {
     char input[] = "vt 1.234";
-    struct WavefrontObjectUnwrap unwrap;
-    unwrap.u = 0.0;
-    unwrap.v = 0.0;
-    unwrap.w = 0.0;
-    int result = parseUnwrap(&unwrap, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void unwrapParseFailsNoCoordinates()
-{
+void unwrapParseFailsNoCoordinates() {
+    char input[] = "vt ";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
+}
+
+void unwrapParseFailsEmptyString() {
     char input[] = "vt";
-    struct WavefrontObjectUnwrap unwrap;
-    unwrap.u = 0.0;
-    unwrap.v = 0.0;
-    unwrap.w = 0.0;
-    int result = parseUnwrap(&unwrap, input);
-    assertFalse(result);
-}
-
-void unwrapParseFailsEmptyString()
-{
-    char input[] = "";
-    struct WavefrontObjectUnwrap unwrap;
-    unwrap.u = 0.0;
-    unwrap.v = 0.0;
-    unwrap.w = 0.0;
-    int result = parseUnwrap(&unwrap, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
 /* Wavefront Obj Normal Test Cases */
-void normalParseThreeCoordinates()
-{
+void normalParseThreeCoordinates() {
     char input[] = "vn 1.234 0.123 0.321";
-    struct WavefrontObjectNormal normal;
-    normal.x = 0.0;
-    normal.y = 0.0;
-    normal.z = 0.0;
-    int result = parseNormal(&normal, input);
-    assertTrue(result);
-    assertFloatsEqual(normal.x, 1.234);
-    assertFloatsEqual(normal.y, 0.123);
-    assertFloatsEqual(normal.z, 0.321);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertFloatsEqual(wObj.normals->x, 1.234);
+    assertFloatsEqual(wObj.normals->y, 0.123);
+    assertFloatsEqual(wObj.normals->z, 0.321);
+    wavefrontObjectRelease(&wObj);
 }
 
-void normalParseFailsTwoCoordinates()
-{
+void normalParseFailsTwoCoordinates() {
     char input[] = "vn 1.234 0.123";
-    struct WavefrontObjectNormal normal;
-    normal.x = 0.0;
-    normal.y = 0.0;
-    normal.z = 0.0;
-    int result = parseNormal(&normal, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void normalParseFailsOneCoordinate()
-{
+void normalParseFailsOneCoordinate() {
     char input[] = "vn 1.234";
-    struct WavefrontObjectNormal normal;
-    normal.x = 0.0;
-    normal.y = 0.0;
-    normal.z = 0.0;
-    int result = parseNormal(&normal, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void normalParseFailsNoCoordinates()
-{
+void normalParseFailsNoCoordinates() {
+    char input[] = "vn ";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
+}
+
+void normalParseFailsEmptyString() {
     char input[] = "vn";
-    struct WavefrontObjectNormal normal;
-    normal.x = 0.0;
-    normal.y = 0.0;
-    normal.z = 0.0;
-    int result = parseNormal(&normal, input);
-    assertFalse(result);
-}
-
-void normalParseFailsEmptyString()
-{
-    char input[] = "";
-    struct WavefrontObjectNormal normal;
-    normal.x = 0.0;
-    normal.y = 0.0;
-    normal.z = 0.0;
-    int result = parseNormal(&normal, input);
-    assertFalse(result);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
 /* Wavefront Obj Material Library Test Cases */
 
-void materialLibraryParseFailsEmptyString()
-{
-    char input[] = "";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseMaterialLibrary(obj, input);
-    assertFalse(result);
-
-    wavefrontObjectFree(obj);
-}
-
-void materialLibraryParseFailsMissingSeparator()
-{
-    char input[] = "mtlliblib.mtl";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseMaterialLibrary(obj, input);
-    assertFalse(result);
-
-    wavefrontObjectFree(obj);
-}
-
-void materialLibraryParsePassesNoLibraries()
-{
+void materialLibraryParseFailsEmptyString() {
     char input[] = "mtllib";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseMaterialLibrary(obj, input);
-    assertTrue(result);
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_PARSE_ERR);
 }
 
-void materialLibraryParsePassesOneLibrary()
-{
+void materialLibraryParsePassesNoLibraries() {
+    char input[] = "mtllib ";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialLibraryCount, 0);
+    wavefrontObjectRelease(&wObj);
+}
+
+void materialLibraryParsePassesOneLibrary() {
     char input[] = "mtllib lib.mtl";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseMaterialLibrary(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->materialLibraryCount, 1);
-    assertStringsEqual(obj->materialLibraries[0], "lib.mtl");
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialLibraryCount, 1);
+    assertStringsEqual(wObj.materialLibraries[0], "lib.mtl");
+    wavefrontObjectRelease(&wObj);
 }
 
-void materialLibraryParsePassesMultipleLibraries()
-{
+void materialLibraryParsePassesMultipleLibraries() {
     char input[] = "mtllib lib1.mtl lib2.mtl lib3.mtl";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseMaterialLibrary(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->materialLibraryCount, 3);
-    assertStringsEqual(obj->materialLibraries[0], "lib1.mtl");
-    assertStringsEqual(obj->materialLibraries[1], "lib2.mtl");
-    assertStringsEqual(obj->materialLibraries[2], "lib3.mtl");
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialLibraryCount, 3);
+    assertStringsEqual(wObj.materialLibraries[0], "lib1.mtl");
+    assertStringsEqual(wObj.materialLibraries[1], "lib2.mtl");
+    assertStringsEqual(wObj.materialLibraries[2], "lib3.mtl");
+    wavefrontObjectRelease(&wObj);
 }
 
 /* Wavefront Obj Parse Line Test Cases */
-void parseLineIgnoresComments()
-{
+
+void parseLineIgnoresComments() {
     char input[] = "#Line Comment";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseLine(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 0);
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 0);
+    wavefrontObjectRelease(&wObj);
 }
 
-void parseLineParsesVertex()
-{
+void parseLineParsesVertex() {
     char input[] = "v 1.234 0.123 0.321";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseLine(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 0);
-    assertIntegersEqual(obj->vertexCount, 1);
-    assertIntegersEqual(obj->unwrapCount, 0);
-    assertIntegersEqual(obj->normalCount, 0);
-    //struct WavefrontObjectObject* o = obj->objects;
-    //assertIntegersEqual(o->faceCount, 0);
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 0);
+    assertIntegersEqual(wObj.vertexCount, 1);
+    assertIntegersEqual(wObj.unwrapCount, 0);
+    assertIntegersEqual(wObj.normalCount, 0);
+    wavefrontObjectRelease(&wObj);
 }
 
-void parseLineParsesUnwrap()
-{
+void parseLineParsesUnwrap() {
     char input[] = "vt 1.234 0.123 0.321";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseLine(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 0);
-    assertIntegersEqual(obj->vertexCount, 0);
-    assertIntegersEqual(obj->unwrapCount, 1);
-    assertIntegersEqual(obj->normalCount, 0);
-    //struct WavefrontObjectObject* o = obj->objects;
-    //assertIntegersEqual(o->faceCount, 0);
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 0);
+    assertIntegersEqual(wObj.vertexCount, 0);
+    assertIntegersEqual(wObj.unwrapCount, 1);
+    assertIntegersEqual(wObj.normalCount, 0);
+    wavefrontObjectRelease(&wObj);
 }
 
-void parseLineParsesNormal()
-{
+void parseLineParsesNormal() {
     char input[] = "vn 1.234 0.123 0.321";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseLine(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 0);
-    assertIntegersEqual(obj->vertexCount, 0);
-    assertIntegersEqual(obj->unwrapCount, 0);
-    assertIntegersEqual(obj->normalCount, 1);
-    //struct WavefrontObjectObject* o = obj->objects;
-    //assertIntegersEqual(o->faceCount, 0);
-
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 0);
+    assertIntegersEqual(wObj.vertexCount, 0);
+    assertIntegersEqual(wObj.unwrapCount, 0);
+    assertIntegersEqual(wObj.normalCount, 1);
+    wavefrontObjectRelease(&wObj);
 }
 
-void parseLineParsesFace()
-{
+void parseLineParsesFace() {
     char input[] = "f 1/2/3 4/5/6 7/8/9";
-    struct WavefrontObject* obj = wavefrontObjectCreate();
-
-    int result = parseLine(obj, input);
-    assertTrue(result);
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
-    assertIntegersEqual(obj->vertexCount, 0);
-    assertIntegersEqual(obj->unwrapCount, 0);
-    assertIntegersEqual(obj->normalCount, 0);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 1);
+    struct WavefrontObjectObject* o = wObj.objects;
+    assertIntegersEqual(wObj.vertexCount, 0);
+    assertIntegersEqual(wObj.unwrapCount, 0);
+    assertIntegersEqual(wObj.normalCount, 0);
     assertIntegersEqual(o->faceCount, 1);
-
-    wavefrontObjectFree(obj);
+    wavefrontObjectRelease(&wObj);
 }
 
 /* Wavefront Obj Parse object test cases */
@@ -522,29 +382,32 @@ void parseLineParsesFace()
 void parseObjectTest() {
     char input[] = "\
     o test_object\n";
-    struct WavefrontObject* obj = parseWavefrontObjectFromString(input);
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 1);
+    struct WavefrontObjectObject* o = wObj.objects;
     assertStringsEqual(o->name, "test_object");
-    wavefrontObjectFree(obj);
+    wavefrontObjectRelease(&wObj);
 
     char input2[] = "\
     o test_object\n\
     o test_object\n";
-    obj = parseWavefrontObjectFromString(input2);
-    assertIntegersEqual(obj->objectCount, 1);
-    o = obj->objects;
+    result = parseWavefrontObjectFromString(&wObj, input2);
+    assertIntegersEqual(result, STATUS_OK);
+    o = wObj.objects;
     assertStringsEqual(o->name, "test_object");
-    wavefrontObjectFree(obj);
+    wavefrontObjectRelease(&wObj);
 
     char input3[] = "\
     o test_object1\n\
     o test_object2\n";
-    obj = parseWavefrontObjectFromString(input3);
-    assertIntegersEqual(obj->objectCount, 2);
-    o = obj->objects;
+    result = parseWavefrontObjectFromString(&wObj, input3);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 2);
+    o = wObj.objects;
     assertStringsEqual(o->name, "test_object1");
-    wavefrontObjectFree(obj);
+    wavefrontObjectRelease(&wObj);
 }
 
 /* Wavefront Obj Parse usemtl Test Cases */
@@ -552,40 +415,36 @@ void parseObjectTest() {
 void parseUseMaterialTest() {
     char input[] = "\
     usemtl test_material\n";
-    struct WavefrontObject* obj = parseWavefrontObjectFromString(input);
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
-    assertIntegersEqual(o->materialCount, 1);
-    assertStringsEqual(o->materials[0], "test_material");
-    wavefrontObjectFree(obj);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialCount, 1);
+    assertStringsEqual(wObj.materials[0], "test_material");
+    wavefrontObjectRelease(&wObj);
 
     char input2[] = "\
     usemtl test_material\n\
     usemtl test_material\n";
-    obj = parseWavefrontObjectFromString(input2);
-    assertIntegersEqual(obj->objectCount, 1);
-    o = obj->objects;
-    assertIntegersEqual(o->materialCount, 1);
-    assertStringsEqual(o->materials[0], "test_material");
-    wavefrontObjectFree(obj);
+    result = parseWavefrontObjectFromString(&wObj, input2);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialCount, 1);
+    assertStringsEqual(wObj.materials[0], "test_material");
+    wavefrontObjectRelease(&wObj);
 
     char input3[] = "\
     usemtl test_material1\n\
     usemtl test_material2\n";
-    obj = parseWavefrontObjectFromString(input3);
-    assertIntegersEqual(obj->objectCount, 1);
-    o = obj->objects;
-    assertIntegersEqual(o->materialCount, 2);
-    assertStringsEqual(o->materials[0], "test_material1");
-    assertStringsEqual(o->materials[1], "test_material2");
-    wavefrontObjectFree(obj);
+    result = parseWavefrontObjectFromString(&wObj, input3);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialCount, 2);
+    assertStringsEqual(wObj.materials[0], "test_material1");
+    assertStringsEqual(wObj.materials[1], "test_material2");
+    wavefrontObjectRelease(&wObj);
 
 }
 
 /* Wavefront Obj Parse From String Test Cases */
-
-void normalWavefrontObjectFromString()
-{
+void normalWavefrontObjectFromString() {
     char input[] = "\
     o test_object\n\
     v 1.00 2.00 3.00\n\
@@ -600,55 +459,56 @@ void normalWavefrontObjectFromString()
     usemtl test_material\n\
     f 1/1/1 2/2/2 3/3/3\n";
 
-    struct WavefrontObject* obj = parseWavefrontObjectFromString(input);
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
 
-    assertIntegersEqual(obj->objectCount, 1);
-    struct WavefrontObjectObject* o = obj->objects;
+    assertIntegersEqual(wObj.objectCount, 1);
+    struct WavefrontObjectObject* o = wObj.objects;
 
     assertStringsEqual(o->name, "test_object");
 
-    assertIntegersEqual(obj->vertexCount, 3);
-    assertFloatsEqual(obj->vertices[0].x, 1.00);
-    assertFloatsEqual(obj->vertices[0].y, 2.00);
-    assertFloatsEqual(obj->vertices[0].z, 3.00);
-    assertFloatsEqual(obj->vertices[1].x, 4.00);
-    assertFloatsEqual(obj->vertices[1].y, 5.00);
-    assertFloatsEqual(obj->vertices[1].z, 6.00);
-    assertFloatsEqual(obj->vertices[2].x, 7.00);
-    assertFloatsEqual(obj->vertices[2].y, 8.00);
-    assertFloatsEqual(obj->vertices[2].z, 9.00);
+    assertIntegersEqual(wObj.vertexCount, 3);
+    assertFloatsEqual(wObj.vertices[0].x, 1.00);
+    assertFloatsEqual(wObj.vertices[0].y, 2.00);
+    assertFloatsEqual(wObj.vertices[0].z, 3.00);
+    assertFloatsEqual(wObj.vertices[1].x, 4.00);
+    assertFloatsEqual(wObj.vertices[1].y, 5.00);
+    assertFloatsEqual(wObj.vertices[1].z, 6.00);
+    assertFloatsEqual(wObj.vertices[2].x, 7.00);
+    assertFloatsEqual(wObj.vertices[2].y, 8.00);
+    assertFloatsEqual(wObj.vertices[2].z, 9.00);
 
-    assertIntegersEqual(obj->unwrapCount, 3);
-    assertFloatsEqual(obj->unwraps[0].u, 0.1);
-    assertFloatsEqual(obj->unwraps[0].v, 0.2);
-    assertFloatsEqual(obj->unwraps[0].w, 0.3);
-    assertFloatsEqual(obj->unwraps[1].u, 0.4);
-    assertFloatsEqual(obj->unwraps[1].v, 0.5);
-    assertFloatsEqual(obj->unwraps[1].w, 0.6);
-    assertFloatsEqual(obj->unwraps[2].u, 0.7);
-    assertFloatsEqual(obj->unwraps[2].v, 0.8);
-    assertFloatsEqual(obj->unwraps[2].w, 0.9);
+    assertIntegersEqual(wObj.unwrapCount, 3);
+    assertFloatsEqual(wObj.unwraps[0].u, 0.1);
+    assertFloatsEqual(wObj.unwraps[0].v, 0.2);
+    assertFloatsEqual(wObj.unwraps[0].w, 0.3);
+    assertFloatsEqual(wObj.unwraps[1].u, 0.4);
+    assertFloatsEqual(wObj.unwraps[1].v, 0.5);
+    assertFloatsEqual(wObj.unwraps[1].w, 0.6);
+    assertFloatsEqual(wObj.unwraps[2].u, 0.7);
+    assertFloatsEqual(wObj.unwraps[2].v, 0.8);
+    assertFloatsEqual(wObj.unwraps[2].w, 0.9);
 
-    assertIntegersEqual(obj->normalCount, 3);
-    assertFloatsEqual(obj->normals[0].x, 0.1);
-    assertFloatsEqual(obj->normals[0].y, 0.2);
-    assertFloatsEqual(obj->normals[0].z, 0.3);
-    assertFloatsEqual(obj->normals[1].x, 0.4);
-    assertFloatsEqual(obj->normals[1].y, 0.5);
-    assertFloatsEqual(obj->normals[1].z, 0.6);
-    assertFloatsEqual(obj->normals[2].x, 0.7);
-    assertFloatsEqual(obj->normals[2].y, 0.8);
-    assertFloatsEqual(obj->normals[2].z, 0.9);
+    assertIntegersEqual(wObj.normalCount, 3);
+    assertFloatsEqual(wObj.normals[0].x, 0.1);
+    assertFloatsEqual(wObj.normals[0].y, 0.2);
+    assertFloatsEqual(wObj.normals[0].z, 0.3);
+    assertFloatsEqual(wObj.normals[1].x, 0.4);
+    assertFloatsEqual(wObj.normals[1].y, 0.5);
+    assertFloatsEqual(wObj.normals[1].z, 0.6);
+    assertFloatsEqual(wObj.normals[2].x, 0.7);
+    assertFloatsEqual(wObj.normals[2].y, 0.8);
+    assertFloatsEqual(wObj.normals[2].z, 0.9);
 
     assertIntegersEqual(o->faceCount, 1);
-    assertIntegersEqual(o->materialCount, 1);
-    assertStringsEqual(o->materials[0], "test_material");
+    assertIntegersEqual(wObj.materialCount, 1);
+    assertStringsEqual(wObj.materials[0], "test_material");
 
-    wavefrontObjectFree(obj);
+    wavefrontObjectRelease(&wObj);
 }
 
-void wavefrontObjectParserTest()
-{
+void wavefrontObjectParserTest() {
     canParseEmptyString();
     canParseVertexOnlyPoint();
     canParseVertexAndTextureOnlyPoint();
@@ -663,9 +523,7 @@ void wavefrontObjectParserTest()
     canParseGenericFaceWithSpaces();
     canParseGenericFaceWithTabs();
     faceFailToParseEmptyString();
-    faceFailWithMissingF();
     faceMissingPoints();
-
 
     vertexParseFourCoordinates();
     vertexParseThreeCoordinates();
@@ -687,7 +545,6 @@ void wavefrontObjectParserTest()
     normalParseFailsEmptyString();
 
     materialLibraryParseFailsEmptyString();
-    materialLibraryParseFailsMissingSeparator();
     materialLibraryParsePassesNoLibraries();
     materialLibraryParsePassesOneLibrary();
     materialLibraryParsePassesMultipleLibraries();
