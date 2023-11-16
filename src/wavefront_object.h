@@ -21,32 +21,32 @@ struct WavefrontObjectPoint {
 };
 
 struct WavefrontObjectLine {
-    int* v;
+    int *v;
     unsigned int vertexCount;
     unsigned int material;
 };
 
 struct WavefrontObjectFace {
-    struct WavefrontObjectPoint* points;
+    struct WavefrontObjectPoint *points;
     unsigned int pointCount;
     unsigned int material;
 };
 
 struct WavefrontObjectObject {
-    char* name;
-    struct WavefrontObjectFace* faces;
-    struct WavefrontObjectLine* lines;
+    char *name;
+    struct WavefrontObjectFace *faces;
+    struct WavefrontObjectLine *lines;
     unsigned int lineCount;
     unsigned int faceCount;
 };
 
 struct WavefrontObject {
-    char** materialLibraries;
-    char** materials;
-    struct WavefrontObjectObject* objects;
-    struct WavefrontObjectVertex* vertices;
-    struct WavefrontObjectUnwrap* unwraps;
-    struct WavefrontObjectNormal* normals;
+    char **materialLibraries;
+    char **materials;
+    struct WavefrontObjectObject *objects;
+    struct WavefrontObjectVertex *vertices;
+    struct WavefrontObjectUnwrap *unwraps;
+    struct WavefrontObjectNormal *normals;
     unsigned int materialLibraryCount;
     unsigned int vertexCount;
     unsigned int unwrapCount;
@@ -58,16 +58,16 @@ struct WavefrontObject {
 };
 
 int wavefrontObjectCompose();
-int wavefrontObjectFaceAddPoint(struct WavefrontObjectFace* face, struct WavefrontObjectPoint* point);
-void wavefrontObjectFaceFree(struct WavefrontObjectFace* face);
-void wavefrontObjectRelease(struct WavefrontObject* obj);
-int wavefrontObjectAddVertex(struct WavefrontObject* obj, struct WavefrontObjectVertex* vertex);
-int wavefrontObjectAddUnwrap(struct WavefrontObject* obj, struct WavefrontObjectUnwrap* unwrap);
-int wavefrontObjectAddNormal(struct WavefrontObject* obj, struct WavefrontObjectNormal* normal);
-int wavefrontObjectAddFace(struct WavefrontObject* obj, struct WavefrontObjectFace* face);
-int wavefrontObjectAddMaterialLibrary(struct WavefrontObject* obj, const char* materialLibrary);
-int wavefrontObjectAddMaterial(struct WavefrontObject* obj, const char* material);
-int wavefrontObjectAddObject(struct WavefrontObject* obj, const char* object);
+int wavefrontObjectFaceAddPoint(struct WavefrontObjectFace *face, struct WavefrontObjectPoint *point);
+void wavefrontObjectFaceFree(struct WavefrontObjectFace *face);
+void wavefrontObjectRelease(struct WavefrontObject *obj);
+int wavefrontObjectAddVertex(struct WavefrontObject *obj, struct WavefrontObjectVertex *vertex);
+int wavefrontObjectAddUnwrap(struct WavefrontObject *obj, struct WavefrontObjectUnwrap *unwrap);
+int wavefrontObjectAddNormal(struct WavefrontObject *obj, struct WavefrontObjectNormal *normal);
+int wavefrontObjectAddFace(struct WavefrontObject *obj, struct WavefrontObjectFace *face);
+int wavefrontObjectAddMaterialLibrary(struct WavefrontObject *obj, const char *materialLibrary);
+int wavefrontObjectAddMaterial(struct WavefrontObject *obj, const char *material);
+int wavefrontObjectAddObject(struct WavefrontObject *obj, const char *object);
 
 #ifdef __cplusplus
 }

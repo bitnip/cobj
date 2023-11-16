@@ -107,8 +107,8 @@ void canParseGenericFaceWithSpaces() {
     struct WavefrontObject wObj;
     int result = parseWavefrontObjectFromString(&wObj, input);
     assertIntegersEqual(result, STATUS_OK);
-    struct WavefrontObjectObject* obj = wObj.objects;
-    struct WavefrontObjectFace* face = obj->faces;
+    struct WavefrontObjectObject *obj = wObj.objects;
+    struct WavefrontObjectFace *face = obj->faces;
     assertIntegersEqual(face->pointCount, 3);
     wavefrontObjectRelease(&wObj);
 }
@@ -118,8 +118,8 @@ void canParseGenericFaceWithTabs() {
     struct WavefrontObject wObj;
     int result = parseWavefrontObjectFromString(&wObj, input);
     assertIntegersEqual(result, STATUS_OK);
-    struct WavefrontObjectObject* obj = wObj.objects;
-    struct WavefrontObjectFace* face = obj->faces;
+    struct WavefrontObjectObject *obj = wObj.objects;
+    struct WavefrontObjectFace *face = obj->faces;
     assertIntegersEqual(face->pointCount, 3);
     wavefrontObjectRelease(&wObj);
 }
@@ -369,7 +369,7 @@ void parseLineParsesFace() {
     int result = parseWavefrontObjectFromString(&wObj, input);
     assertIntegersEqual(result, STATUS_OK);
     assertIntegersEqual(wObj.objectCount, 1);
-    struct WavefrontObjectObject* o = wObj.objects;
+    struct WavefrontObjectObject *o = wObj.objects;
     assertIntegersEqual(wObj.vertexCount, 0);
     assertIntegersEqual(wObj.unwrapCount, 0);
     assertIntegersEqual(wObj.normalCount, 0);
@@ -386,7 +386,7 @@ void parseObjectTest() {
     int result = parseWavefrontObjectFromString(&wObj, input);
     assertIntegersEqual(result, STATUS_OK);
     assertIntegersEqual(wObj.objectCount, 1);
-    struct WavefrontObjectObject* o = wObj.objects;
+    struct WavefrontObjectObject *o = wObj.objects;
     assertStringsEqual(o->name, "test_object");
     wavefrontObjectRelease(&wObj);
 
@@ -464,7 +464,7 @@ void normalWavefrontObjectFromString() {
     assertIntegersEqual(result, STATUS_OK);
 
     assertIntegersEqual(wObj.objectCount, 1);
-    struct WavefrontObjectObject* o = wObj.objects;
+    struct WavefrontObjectObject *o = wObj.objects;
 
     assertStringsEqual(o->name, "test_object");
 
