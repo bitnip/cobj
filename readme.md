@@ -34,9 +34,3 @@ cygwin packages:
 
 ### Documentation
 `> make docs`
-
-## Known Issues
-- Alloc failures are not handled.
-- Unit tests do not cover alloc failures.
-- Only polygonal mesh is supported.
-- Only importing is supported.
