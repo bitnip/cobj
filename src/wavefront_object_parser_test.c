@@ -12,6 +12,18 @@ void canParseEmptyString() {
 
 /* Wavefront Obj Point Test Cases */
 
+void canParseLine() {
+    char input[] = "l 1 2 3";
+    struct WavefrontObject wObj;
+    int result = parseWavefrontObjectFromString(&wObj, input);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.objectCount, 1);
+    assertIntegersEqual(wObj.objects->faces->points->v, 1);
+    assertIntegersEqual(wObj.objects->faces->points->vt, 0);
+    assertIntegersEqual(wObj.objects->faces->points->vn, 0);
+    wavefrontObjectRelease(&wObj);
+}
+
 void canParseVertexOnlyPoint() {
     char input[] = "f 10 10 10";
     struct WavefrontObject wObj;
@@ -511,6 +523,7 @@ void normalWavefrontObjectFromString() {
 
 void wavefrontObjectParserTest() {
     canParseEmptyString();
+    canParseLine();
     canParseVertexOnlyPoint();
     canParseVertexAndTextureOnlyPoint();
     canParseVertexTextureNormalPoint();

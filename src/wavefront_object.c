@@ -171,13 +171,6 @@ int wavefrontObjectAddMaterial(
 int wavefrontObjectAddObject(
       struct WavefrontObject *obj,
       const char *name) {
-    for(unsigned int i = 0; i < obj->objectCount; i++) {
-        if(strcmp(name, obj->objects[i].name) == 0) {
-            obj->currentObject = i;
-            return STATUS_OK;
-        }
-    }
-
     char *temp = strCopy(name);
     if(temp == NULL) {
         return STATUS_ALLOC_ERR;
@@ -196,9 +189,7 @@ int wavefrontObjectAddObject(
     obj->currentObject = obj->objectCount++;
     struct WavefrontObjectObject *o = obj->objects + obj->currentObject;
     o->name = temp;
-    o->lines = 0;
     o->faces = NULL;
     o->faceCount = 0;
-    o->lineCount = 0;
     return STATUS_OK;
 }

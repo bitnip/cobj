@@ -20,12 +20,6 @@ struct WavefrontObjectPoint {
     int v, vt, vn;
 };
 
-struct WavefrontObjectLine {
-    int *v;
-    unsigned int vertexCount;
-    unsigned int material;
-};
-
 struct WavefrontObjectFace {
     struct WavefrontObjectPoint *points;
     unsigned int pointCount;
@@ -35,8 +29,6 @@ struct WavefrontObjectFace {
 struct WavefrontObjectObject {
     char *name;
     struct WavefrontObjectFace *faces;
-    struct WavefrontObjectLine *lines;
-    unsigned int lineCount;
     unsigned int faceCount;
 };
 

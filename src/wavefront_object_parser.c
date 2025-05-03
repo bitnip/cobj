@@ -114,6 +114,7 @@ struct Parser parsers[] = {
     {"vt", (int (*)(void*, const char*))parseUnwrap},
     {"vn", (int (*)(void*, const char*))parseNormal},
     {"f", (int (*)(void*, const char*))parseFace},
+    {"l", (int (*)(void*, const char*))parseFace},
     {"mtllib", (int (*)(void*, const char*))parseMaterialLibrary},
     {"usemtl", (int (*)(void*, const char*))parseUseMaterial},
     {"o", (int (*)(void*, const char*))parseObject},
