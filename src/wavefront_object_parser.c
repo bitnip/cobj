@@ -60,7 +60,6 @@ static int parsePoint(struct WavefrontObjectPoint *point, const char *input) {
 }
 
 static int parseFace(struct WavefrontObject *obj, const char *line) {
-    if(!line) return STATUS_PARSE_ERR;
     struct WavefrontObjectFace face;
     face.pointCount = 0;
     face.points = NULL;
@@ -82,7 +81,6 @@ static int parseFace(struct WavefrontObject *obj, const char *line) {
 }
 
 static int parseMaterialLibrary(struct WavefrontObject *obj, const char *line) {
-    if(!line) return STATUS_PARSE_ERR;
     int result = STATUS_PARSE_ERR;
     const char *thisToken = line, *nextDelim = NULL, *nextToken = NULL;
     // Remaining tokens are material library files.
@@ -100,12 +98,10 @@ static int parseMaterialLibrary(struct WavefrontObject *obj, const char *line) {
 }
 
 static int parseUseMaterial(struct WavefrontObject *obj, const char *line) {
-    if(!line) return STATUS_PARSE_ERR;
     return wavefrontObjectAddMaterial(obj, line);
 }
 
 static int parseObject(struct WavefrontObject *obj, const char *line) {
-    if(!line) return STATUS_PARSE_ERR;
     return wavefrontObjectAddObject(obj, line);
 }
 
@@ -125,7 +121,6 @@ struct Parser parsers[] = {
 };
 
 int parseWavefrontObjectFromString(struct WavefrontObject *obj, char *input) {
-    if(!input) return NULL;
     wavefrontObjectCompose(obj);
 
     const char *thisToken = input, *nextDelim = NULL, *nextToken = NULL;
@@ -141,7 +136,7 @@ int parseWavefrontObjectFromString(struct WavefrontObject *obj, char *input) {
         tokenize(&thisToken, &nextDelim, &nextToken, ASCII_H_DELIMITERS);
         for(int i = 0; i < sizeof(parsers)/sizeof(struct Parser); i++) {
             if((strStartsWith(thisToken, parsers[i].name) == nextDelim)) {
-                const char *temp = nextToken ? strAfterWhitespace(nextToken) : NULL;
+                const char *temp = strAfterWhitespace(nextDelim);
                 result = parsers[i].fn ? parsers[i].fn(obj, temp) : STATUS_OK;
                 break;
             }

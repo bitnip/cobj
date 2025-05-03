@@ -278,11 +278,12 @@ void normalParseFailsEmptyString() {
 
 /* Wavefront Obj Material Library Test Cases */
 
-void materialLibraryParseFailsEmptyString() {
+void materialLibraryParsePassesEmptyString() {
     char input[] = "mtllib";
     struct WavefrontObject wObj;
     int result = parseWavefrontObjectFromString(&wObj, input);
-    assertIntegersEqual(result, STATUS_PARSE_ERR);
+    assertIntegersEqual(result, STATUS_OK);
+    assertIntegersEqual(wObj.materialLibraryCount, 0);
 }
 
 void materialLibraryParsePassesNoLibraries() {
@@ -544,7 +545,7 @@ void wavefrontObjectParserTest() {
     normalParseFailsNoCoordinates();
     normalParseFailsEmptyString();
 
-    materialLibraryParseFailsEmptyString();
+    materialLibraryParsePassesEmptyString();
     materialLibraryParsePassesNoLibraries();
     materialLibraryParsePassesOneLibrary();
     materialLibraryParsePassesMultipleLibraries();
