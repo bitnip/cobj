@@ -49,7 +49,7 @@ struct WavefrontObject {
     int currentObject;
 };
 
-int wavefrontObjectCompose();
+int wavefrontObjectCompose(struct WavefrontObject *obj);
 int wavefrontObjectFaceAddPoint(struct WavefrontObjectFace *face, struct WavefrontObjectPoint *point);
 void wavefrontObjectFaceFree(struct WavefrontObjectFace *face);
 void wavefrontObjectRelease(struct WavefrontObject *obj);
